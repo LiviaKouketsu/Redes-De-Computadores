@@ -6,7 +6,6 @@ PYTHONHASHSEED = 7
 
 separator = "<>"
 
-
 def recvPckt(number_pckt, size_pckt):
     id_pckts = []
 
@@ -17,6 +16,8 @@ def recvPckt(number_pckt, size_pckt):
 
     for i in range(number_pckt):
         data, addr = sock.recvfrom(size_pckt)
+
+        print(data.decode())
 
         packat = data.decode()
 
@@ -51,8 +52,6 @@ def printData(number_pckt, numPkgRecv, numPkglost, numOutOrdr, numPkgCorr):
 
 def sendPckt(number_pckt, size_pckt, default_msg, addr):
     number_sendPckt = 0
-    number_rcvPckt = 0
-
     
     separator = "<>"
     payload = default_msg 
@@ -80,13 +79,12 @@ addr = (HOST, PORT)
 
 sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 sock.bind(("0.0.0.0", PORT))
+# sock.settimeout(1)
 
 default_msg = "#! Redes de Computadores UEL 2025 *#!"
 
 thread = threading.Thread(target=recvPckt, args=(100, 500))
 thread.start()
 sendPckt(100, 500, default_msg, addr)
-thread.join()
-
-
 sock.sendto("0".encode(), addr)
+thread.join()
