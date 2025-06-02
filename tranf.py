@@ -16,12 +16,14 @@ def recvPckt(number_pckt, size_pckt):
     numPkgCorr = 0
 
     for i in range(number_pckt):
-
         data, addr = sock.recvfrom(size_pckt)
 
-        print(data.decode())
-
         packat = data.decode()
+
+        if packat == "0":
+            print("Finalizando recebimento de pacotes.")
+            break
+
         header, payload, checksum = packat.split(separator)
 
         id_pckts.append(int(header))
@@ -77,10 +79,7 @@ PORT = int(input("Digite a Porta a ser usada: "))
 addr = (HOST, PORT)
 
 sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-sock.bind(("0.0.0.1", PORT))
-sock.settimeout(1)
-
-
+sock.bind(("0.0.0.0", PORT))
 
 default_msg = "#! Redes de Computadores UEL 2025 *#!"
 
