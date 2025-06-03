@@ -20,17 +20,14 @@ def recvPckt(number_pckt, size_pckt):
 
     for i in range(number_pckt):
         try:
-            data, addr = sock.recvfrom(size_pckt)
+            data, addr = sock.recvfrom(2000)
         except socket.timeout:
             numPkglost += 1
             print("Tempo limite de recebimento de pacotes excedido.")
             continue
-        
+
         packat = data.decode()
 
-        if packat == "0":
-            print("Finalizando recebimento de pacotes.")
-            break
 
         header, payload, checksum = packat.split(separator)
 
@@ -50,34 +47,32 @@ def recvPckt(number_pckt, size_pckt):
 
 
 def printData(number_pckt, numPkgRecv, numPkglost, numOutOrdr, numPkgCorr):
-    print(f"Número de pacotes enviados:", locale.format_string('%.2f', number_pckt, grouping=True))
-    print(f"Número de pacotes recebidos:", locale.format_string('%.2f', numPkgRecv, grouping=True))
-    print(f"Número de pacotes perdidos: {numPkglost}")
-    print(f"Número de pacotes recebidos na ordem errada:", locale.format_string('%.2f', numOutOrdr, grouping=True))
-    print(f"Número de pacotes corrompidos:", locale.format_string('%.2f', numPkgCorr, grouping=True))
+    print(f"Numero de pacotes enviados:", locale.format_string('%.2f', number_pckt, grouping=True))
+    print(f"Numero de pacotes recebidos:", locale.format_string('%.2f', numPkgRecv, grouping=True))
+    print(f"Numero de pacotes perdidos:", locale.format_string('%.2f', numPkglost, grouping=True))
+    print(f"Numero de pacotes recebidos na ordem errada:", locale.format_string('%.2f', numOutOrdr, grouping=True))
+    print(f"Numero de pacotes corrompidos:", locale.format_string('%.2f', numPkgCorr, grouping=True))
 
 
 def sendPckt(number_pckt, size_pckt, default_msg, addr):
     number_sendPckt = 0
     
-    separator = "<>"
-    payload = default_msg 
+    # payload = default_msg * size_pckt//(len(default_msg) + 1)
+    payload = default_msg
 
+    print(f"Enviando {number_pckt} pacotes de {size_pckt} bytes...")
 
     i = 0
     while (i < number_pckt):
 
-        packet = f"{i}{separator}{payload}"
+        packet = f"{i}{separator}{payload}".ljust(size_pckt)
         checksum = hash(packet)
         packet = f"{packet}{separator}{checksum}"
         binary_packet = packet.encode()
 
-
         sock.sendto(binary_packet, addr)
         number_sendPckt += 1
         
-        print(f"Enviando pacote {i + 1} de {number_pckt}...")
-
         i+=1
 
 
@@ -94,12 +89,11 @@ sock.sendto("SYN".encode(), addr)
 data, add = sock.recvfrom(1024)
 if data.decode() == "SYN" and add == addr: sock.sendto("ACK".encode(), addr)
 
-sock.settimeout(1)
+sock.settimeout(0.1)
 
 default_msg = "#! Redes de Computadores UEL 2025 *#!"
 
 thread = threading.Thread(target=recvPckt, args=(1000, 500))
 thread.start()
 sendPckt(1000, 500, default_msg, addr)
-sock.sendto("0".encode(), addr)
 thread.join()
