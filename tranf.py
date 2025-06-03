@@ -23,11 +23,9 @@ def recvPckt(number_pckt, size_pckt):
             data, addr = sock.recvfrom(2000)
         except socket.timeout:
             numPkglost += 1
-            print("Tempo limite de recebimento de pacotes excedido.")
             continue
 
         packat = data.decode()
-
 
         header, payload, checksum = packat.split(separator)
 
@@ -65,12 +63,17 @@ def sendPckt(number_pckt, size_pckt, default_msg, addr):
     i = 0
     while (i < number_pckt):
 
-        packet = f"{i}{separator}{payload}".ljust(size_pckt)
+        packet = f"{i}{separator}{payload}".ljust(size_pckt, 'x')
         checksum = hash(packet)
         packet = f"{packet}{separator}{checksum}"
         binary_packet = packet.encode()
 
-        sock.sendto(binary_packet, addr)
+        while True: 
+            try:
+                sock.sendto(binary_packet, addr)
+                break
+            except socket.timeout:
+                continue
         number_sendPckt += 1
         
         i+=1
@@ -78,22 +81,26 @@ def sendPckt(number_pckt, size_pckt, default_msg, addr):
 
 HOST = input("Digite o IP a ser conectado: ")
 PORT = int(input("Digite a Porta a ser usada: "))
+size_pckt = int(input("Digite o tamanho do pacote (em bytes): "))
+number_pckt = 1000
 
 addr = (HOST, PORT)
 
 sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 sock.bind(("0.0.0.0", PORT))
-# sock.settimeout(1)
 
 sock.sendto("SYN".encode(), addr)
+print("Aguardando resposta do servidor...")
 data, add = sock.recvfrom(1024)
-if data.decode() == "SYN" and add == addr: sock.sendto("ACK".encode(), addr)
+print("Resposta recebida:", data.decode())
+if data.decode() != "ACK":
+    sock.sendto("ACK".encode(), addr)
 
 sock.settimeout(0.1)
 
 default_msg = "#! Redes de Computadores UEL 2025 *#!"
 
-thread = threading.Thread(target=recvPckt, args=(1000, 500))
+thread = threading.Thread(target=recvPckt, args=(number_pckt, size_pckt))
 thread.start()
-sendPckt(1000, 500, default_msg, addr)
+sendPckt(number_pckt, size_pckt, default_msg, addr)
 thread.join()
