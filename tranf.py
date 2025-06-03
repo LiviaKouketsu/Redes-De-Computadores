@@ -81,6 +81,10 @@ sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 sock.bind(("0.0.0.0", PORT))
 # sock.settimeout(1)
 
+sock.sendto("SYN".encode(), addr)
+data, add = sock.recvfrom(1024)
+if data.decode() == "SYN" and add == addr: sock.sendto("ACK".encode(), addr)
+
 default_msg = "#! Redes de Computadores UEL 2025 *#!"
 
 thread = threading.Thread(target=recvPckt, args=(100, 500))
