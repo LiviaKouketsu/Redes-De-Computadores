@@ -1,6 +1,10 @@
 import socket
 import threading
 import time
+import locale
+
+# Define o locale para o Brasil
+locale.setlocale(locale.LC_ALL, 'pt_BR.UTF-8')
 
 PYTHONHASHSEED = 7
 
@@ -15,10 +19,13 @@ def recvPckt(number_pckt, size_pckt):
     numPkgCorr = 0
 
     for i in range(number_pckt):
-        data, addr = sock.recvfrom(size_pckt)
-
-        print(data.decode())
-
+        try:
+            data, addr = sock.recvfrom(size_pckt)
+        except socket.timeout:
+            numPkglost += 1
+            print("Tempo limite de recebimento de pacotes excedido.")
+            continue
+        
         packat = data.decode()
 
         if packat == "0":
@@ -43,11 +50,11 @@ def recvPckt(number_pckt, size_pckt):
 
 
 def printData(number_pckt, numPkgRecv, numPkglost, numOutOrdr, numPkgCorr):
-    print(f"Número de pacotes enviados: {number_pckt}")
-    print(f"Número de pacotes recebidos: {numPkgRecv}")
+    print(f"Número de pacotes enviados:", locale.format_string('%.2f', number_pckt, grouping=True))
+    print(f"Número de pacotes recebidos:", locale.format_string('%.2f', numPkgRecv, grouping=True))
     print(f"Número de pacotes perdidos: {numPkglost}")
-    print(f"Número de pacotes recebidos na ordem errada: {numOutOrdr}")
-    print(f"Número de pacotes corrompidos: {numPkgCorr}\n")
+    print(f"Número de pacotes recebidos na ordem errada:", locale.format_string('%.2f', numOutOrdr, grouping=True))
+    print(f"Número de pacotes corrompidos:", locale.format_string('%.2f', numPkgCorr, grouping=True))
 
 
 def sendPckt(number_pckt, size_pckt, default_msg, addr):
@@ -69,6 +76,8 @@ def sendPckt(number_pckt, size_pckt, default_msg, addr):
         sock.sendto(binary_packet, addr)
         number_sendPckt += 1
         
+        print(f"Enviando pacote {i + 1} de {number_pckt}...")
+
         i+=1
 
 
@@ -85,10 +94,12 @@ sock.sendto("SYN".encode(), addr)
 data, add = sock.recvfrom(1024)
 if data.decode() == "SYN" and add == addr: sock.sendto("ACK".encode(), addr)
 
+sock.settimeout(1)
+
 default_msg = "#! Redes de Computadores UEL 2025 *#!"
 
-thread = threading.Thread(target=recvPckt, args=(100, 500))
+thread = threading.Thread(target=recvPckt, args=(1000, 500))
 thread.start()
-sendPckt(100, 500, default_msg, addr)
+sendPckt(1000, 500, default_msg, addr)
 sock.sendto("0".encode(), addr)
 thread.join()
