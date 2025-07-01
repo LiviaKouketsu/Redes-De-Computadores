@@ -27,7 +27,7 @@ def recvPckt(number_pckt, size_pckt):
 
         packat = data.decode()
 
-        header, payload, checksum = packat.split(separator)
+        header, payload, checksum, fill = packat.split(separator)
 
         id_pckts.append(int(header))
 
@@ -63,9 +63,9 @@ def sendPckt(number_pckt, size_pckt, default_msg, addr):
     i = 0
     while (i < number_pckt):
 
-        packet = f"{i}{separator}{payload}".ljust(size_pckt, 'x')
+        packet = f"{i}{separator}{payload}"
         checksum = hash(packet)
-        packet = f"{packet}{separator}{checksum}"
+        packet = f"{packet}{separator}{checksum}{separator}".ljust(size_pckt, ' ')
         binary_packet = packet.encode()
 
         while True: 
