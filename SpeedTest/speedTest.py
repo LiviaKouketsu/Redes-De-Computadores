@@ -1,6 +1,67 @@
 import socket
 import time
 
+def downloadTCP(sock):
+   
+    bytes_recv = 0
+    pckt_recv = 0
+    lost_pckt = 0
+
+    data, addr = sock.recvfrom(500)
+
+    start_time = time.time()
+    duracao = time.time() - start_time
+    bytes_recv += len(data)
+    pckt_recv += 1
+
+    while duracao < 20:
+        data, addr = sock.recvfrom(500)
+
+        bytes_recv += len(data)
+        pckt_recv += 1
+        duracao = time.time() - start_time
+
+    sock.sendto("Qual a quantidade de pacotes?")
+    send_pckt, addr = sock.recvfrom(500)
+
+    lost_pckt = send_pckt - pckt_recv
+
+    printData(bytes_recv, pckt_recv, duracao, lost_pckt)
+
+def downloadUDP(sock):
+   
+    bytes_recv = 0
+    pckt_recv = 0
+    lost_pckt = 0
+
+    data, addr = sock.recv(500)
+
+    start_time = time.time()
+    duracao = time.time() - start_time
+    bytes_recv += len(data)
+    pckt_recv += 1
+
+    while duracao < 20:
+        data, addr = sock.recv(500)
+
+        bytes_recv += len(data)
+        pckt_recv += 1
+        duracao = time.time() - start_time
+
+    sock.sendto("Qual a quantidade de pacotes?")
+    send_pckt, addr = sock.recv(500)
+     
+    lost_pckt = send_pckt - pckt_recv
+
+    printData(bytes_recv, pckt_recv, duracao, lost_pckt)
+
+def printData(bytes_recv, pckt_recv, duracao, lost_pckt):
+    print(f"Total de bytes recebidos: {bytes_recv}")
+    print(f"Total de pacotes recebidos: {pckt_recv}")
+    print(f"Total de bytes enviados por segundo: {bytes_recv/duracao}")
+    print(f"Total de pacotes enviados por segundo: {pckt_recv/duracao}")
+    print(f"Total de pacotes perdidos: {lost_pckt}")
+
 
 # Function to perform a TCP speed test
 def speedTestUDP(host, port, execType):
