@@ -91,7 +91,7 @@ def downloadUDP(sock):
     pckt_recv += 1
 
     # Define um timeout (garante que não fica travado esperando receber um pacote final no loop)
-    sock.settimeout(0.5)
+    sock.settimeout(1)
     
     # Loop de (exec_time) segundos
     inicio = time.monotonic()
@@ -108,11 +108,12 @@ def downloadUDP(sock):
     sock.settimeout(None)
     sock.sendto("GET".encode(), addr)
 
-    # Espera receber o pacote com o numero de pacotes, desconsiderando os pacotes de teste de rede (que possuem o primeiro caractere 't')
+    # Espera receber o pacote com o numero de pacotes, desconsiderando os pacotes de teste de rede (que dão exception pq são diferentes de um inteiro)
     msg, addr = sock.recvfrom(500)
-    while (msg.decode()[0] == 't'): msg, addr = sock.recvfrom(500)
+    while not lost_pckt:
+        try: int(msg.decode()) - pckt_recv
+        except: msg, addr = sock.recvfrom(500)
 
-    lost_pckt = int(msg.decode()) - pckt_recv
     printDataDownload(bytes_recv, pckt_recv, lost_pckt)
 
 
@@ -131,7 +132,7 @@ def downloadTCP(sock):
     pckt_recv += 1
 
     # Define um timeout (garante que não fica travado esperando receber um pacote final no loop)
-    sock.settimeout(0.5)
+    sock.settimeout(1)
     inicio = time.monotonic()
     
     #Contagem de 20 segundos de envio 
@@ -148,11 +149,12 @@ def downloadTCP(sock):
     sock.settimeout(None)
     sock.send("GET".encode())
 
-    # Espera receber o pacote com o numero de pacotes, desconsiderando os pacotes de teste de rede (que possuem o primeiro caractere 't')
+    # Espera receber o pacote com o numero de pacotes, desconsiderando os pacotes de teste de rede (que dão exception pq são diferentes de um inteiro)
     msg = sock.recv(500)
-    while (msg.decode()[0] == 't'): msg = sock.recv(500)
-     
-    lost_pckt = int(msg.decode()) - pckt_recv
+    while not lost_pckt:
+        try: lost_pckt = int(msg.decode()) - pckt_recv
+        except: msg = sock.recv(500)
+
     printDataDownload(bytes_recv, pckt_recv, lost_pckt)
 
 
@@ -207,7 +209,7 @@ def speedTestTCP(host, port, execType):
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         
         sock.bind(('0.0.0.0', port))
-        sock.listen(1)
+        sock.listen()
         sock, addr = sock.accept()
         
         print("Iniciando teste de download...")
@@ -228,6 +230,8 @@ mode = input("Modo de execução (upload, download): ")
 
 if   tipo.lower() == 'udp':
     speedTestUDP(addr, port, mode)
+
 elif tipo.lower() == 'tcp':
     speedTestTCP(addr, port, mode)
+
 else:print("Tipo de conexão inválido.")
