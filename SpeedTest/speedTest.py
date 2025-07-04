@@ -1,114 +1,203 @@
 import socket
 import time
+import locale
 
-def downloadTCP(sock):
-   
-    bytes_recv = 0
-    pckt_recv = 0
-    lost_pckt = 0
+exec_time = 20
 
-    data, addr = sock.recvfrom(500)
 
-    start_time = time.time()
-    duracao = time.time() - start_time
-    bytes_recv += len(data)
-    pckt_recv += 1
 
-    while duracao < 20:
-        data, addr = sock.recvfrom(500)
 
-        bytes_recv += len(data)
-        pckt_recv += 1
-        duracao = time.time() - start_time
 
-    sock.sendto("Qual a quantidade de pacotes?")
-    send_pckt, addr = sock.recvfrom(500)
+def printDataUpload(packet_send, total_bits):
+    print(f"Numero total de bytes: ", locale.format_string('%.2f', total_bits, grouping=True))
+    print(f"Numero total de bytes por segundo: ", locale.format_string('%.2f', total_bits/exec_time, grouping=True))
+    print(f"Numero de pacotes enviados: ", locale.format_string('%.2f', packet_send, grouping=True))
+    print(f"Numero de pacotes enviados por segundo: ", locale.format_string('%.2f', packet_send/exec_time, grouping=True))
 
-    lost_pckt = send_pckt - pckt_recv
 
-    printData(bytes_recv, pckt_recv, duracao, lost_pckt)
 
-def downloadUDP(sock):
-   
-    bytes_recv = 0
-    pckt_recv = 0
-    lost_pckt = 0
 
-    data, addr = sock.recv(500)
 
-    start_time = time.time()
-    duracao = time.time() - start_time
-    bytes_recv += len(data)
-    pckt_recv += 1
-
-    while duracao < 20:
-        data, addr = sock.recv(500)
-
-        bytes_recv += len(data)
-        pckt_recv += 1
-        duracao = time.time() - start_time
-
-    sock.sendto("Qual a quantidade de pacotes?")
-    send_pckt, addr = sock.recv(500)
-     
-    lost_pckt = send_pckt - pckt_recv
-
-    printData(bytes_recv, pckt_recv, duracao, lost_pckt)
-
-def printData(bytes_recv, pckt_recv, duracao, lost_pckt):
+def printDataDownload(bytes_recv, pckt_recv, lost_pckt):
     print(f"Total de bytes recebidos: {bytes_recv}")
+    print(f"Total de bytes recebidos por segundo: {bytes_recv/exec_time}")
     print(f"Total de pacotes recebidos: {pckt_recv}")
-    print(f"Total de bytes enviados por segundo: {bytes_recv/duracao}")
-    print(f"Total de pacotes enviados por segundo: {pckt_recv/duracao}")
+    print(f"Total de pacotes recebidos por segundo: {pckt_recv/exec_time}")
     print(f"Total de pacotes perdidos: {lost_pckt}")
 
 
-# Function to perform a TCP speed test
+
+
+
+def uploadUDP(sock, target):
+    
+    payload = "teste de rede *2025*"
+    content = (payload * (500 // len(payload))).encode()
+    packet_send = 0
+    total_bytes = 0
+
+    # Loop de (exec_time) segundos
+    inicio = time.monotonic()
+    while(time.monotonic() - inicio <= exec_time):
+        print(time.monotonic() - inicio)
+        total_bytes += sock.sendto(content, target)
+        packet_send += 1
+
+    # Espera receber o pedido por numero de pacotes, então o retorna
+    sock.recvfrom(500)
+    sock.sendto(f"{packet_send}".encode(), target)
+
+    total_bits = total_bytes * 8
+    printDataUpload(packet_send, total_bits)
+    
+
+
+
+
+def uploadTCP(sock):
+    
+    payload = "teste de rede *2025*"
+    content = (payload * (500 // len(payload))).encode()
+    packet_send = 0
+    total_bytes = 0
+
+    # Loop de (exec_time) segundos
+    inicio = time.monotonic()
+    while(time.monotonic() - inicio <= exec_time):
+        print(time.monotonic() - inicio)
+        total_bytes += sock.send(content)             
+        packet_send += 1
+
+    # Espera receber o pedido por numero de pacotes, então o retorna
+    sock.recv(500)
+    sock.send(f"{packet_send}".encode())
+
+    total_bits = total_bytes * 8
+    printDataUpload(packet_send, total_bits)
+    
+
+
+
+
+def downloadUDP(sock):
+
+    bytes_recv = 0
+    pckt_recv = 0
+    lost_pckt = 0
+
+    # Pacote Inicial do "fluxo"
+    data, addr = sock.recvfrom(500)
+    bytes_recv += len(data)
+    pckt_recv += 1
+
+    # Define um timeout (garante que não fica travado esperando receber um pacote final no loop)
+    sock.settimeout(0.5)
+    
+    # Loop de (exec_time) segundos
+    inicio = time.monotonic()
+    while(time.monotonic() - inicio <= exec_time):
+        print(time.monotonic() - inicio)
+        # Tenta receber um pacote se passa do tempo de timeout sai do loop pela exceção socket.timeout
+        try: data, addr = sock.recvfrom(500)
+        except socket.timeout: break
+
+        bytes_recv += len(data)
+        pckt_recv += 1
+
+    # Desabilita o timeout e envia o pedido pelo numero de pacotes enviados
+    sock.settimeout(None)
+    sock.sendto("GET".encode(), addr)
+
+    # Espera receber o pacote com o numero de pacotes, desconsiderando os pacotes de teste de rede (que possuem o primeiro caractere 't')
+    msg, addr = sock.recvfrom(500)
+    while (msg.decode()[0] == 't'): msg, addr = sock.recvfrom(500)
+
+    lost_pckt = int(msg.decode()) - pckt_recv
+    printDataDownload(bytes_recv, pckt_recv, lost_pckt)
+
+
+
+
+
+def downloadTCP(sock):
+
+    bytes_recv = 0
+    pckt_recv = 0
+    lost_pckt = 0
+
+    # Pacote Inicial do "fluxo"
+    data = sock.recv(500)
+    bytes_recv += len(data)
+    pckt_recv += 1
+
+    # Define um timeout (garante que não fica travado esperando receber um pacote final no loop)
+    sock.settimeout(0.5)
+    inicio = time.monotonic()
+    
+    #Contagem de 20 segundos de envio 
+    while(time.monotonic() - inicio <= exec_time):
+        print(time.monotonic() - inicio)
+        # Tenta receber um pacote se passa do tempo de timeout sai do loop pela exceção socket.timeout
+        try: data = sock.recv(500)
+        except socket.timeout: break
+
+        bytes_recv += len(data)
+        pckt_recv += 1
+
+    # Desabilita o timeout e envia o pedido pelo numero de pacotes enviados
+    sock.settimeout(None)
+    sock.send("GET".encode())
+
+    # Espera receber o pacote com o numero de pacotes, desconsiderando os pacotes de teste de rede (que possuem o primeiro caractere 't')
+    msg = sock.recv(500)
+    while (msg.decode()[0] == 't'): msg = sock.recv(500)
+     
+    lost_pckt = int(msg.decode()) - pckt_recv
+    printDataDownload(bytes_recv, pckt_recv, lost_pckt)
+
+
+
+
+
 def speedTestUDP(host, port, execType):
 
     print(f"Connected to {host}:{port}")
 
     if execType == 'upload':
-        # Create a TCP socket
+
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
         print("Iniciando teste de upload...")
-        
-        uploadUDP(sock)
+        uploadUDP(sock, (host, port))
         
         sock.close()
         
     elif execType == 'download':
         # Create a TCP socket        
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        
         sock.bind(('0.0.0.0', port))
         
         print("Iniciando teste de download...")
-
         downloadUDP(sock)
         
         sock.close()
     
-    else:
-        print("tipo de execução inválido.")
-        sock.close()
-        return
+    else: print("tipo de execução inválido.")
 
 
-# Function to perform a TCP speed test
+
+
+
 def speedTestTCP(host, port, execType):
 
     print(f"Connected to {host}:{port}")
 
     if execType == 'upload':
-        # Create a TCP socket
+
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        
         sock.connect((host, port))
 
         print("Iniciando teste de upload...")
-        
         uploadTCP(sock)
         
         sock.close()
@@ -122,21 +211,23 @@ def speedTestTCP(host, port, execType):
         sock, addr = sock.accept()
         
         print("Iniciando teste de download...")
-        
         downloadTCP(sock)
         
         sock.close()
-    else:
-        print("tipo de execução inválido.")
+
+    else: print("tipo de execução inválido.")
 
 
-type = input("UDP ou TCP: ").lower()
+
+
+
+tipo = input("UDP ou TCP: ").lower()
 addr = input("Entre com o endereço a ser conectado: ")
 port = int(input("Digite a porta a ser utilizada: "))
 mode = input("Modo de execução (upload, download): ")
 
-if   type.lower() == 'udp':
+if   tipo.lower() == 'udp':
     speedTestUDP(addr, port, mode)
-elif type.lower() == 'tcp':
+elif tipo.lower() == 'tcp':
     speedTestTCP(addr, port, mode)
 else:print("Tipo de conexão inválido.")
