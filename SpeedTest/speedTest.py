@@ -19,11 +19,11 @@ def printDataUpload(packet_send, total_bits):
 
 
 def printDataDownload(bytes_recv, pckt_recv, lost_pckt):
-    print(f"Total de bytes recebidos: {bytes_recv}")
-    print(f"Total de bytes recebidos por segundo: {bytes_recv/exec_time}")
-    print(f"Total de pacotes recebidos: {pckt_recv}")
-    print(f"Total de pacotes recebidos por segundo: {pckt_recv/exec_time}")
-    print(f"Total de pacotes perdidos: {lost_pckt}")
+    print(f"Numero total de bytes recebidos:", locale.format_string('%d', bytes_recv, grouping=True))
+    print(f"Numero total de bytes recebidos por segundo:", locale.format_string('%.2f', bytes_recv/exec_time, grouping=True))
+    print(f"Numero total de pacotes recebidos:", locale.format_string('%d', pckt_recv, grouping=True))
+    print(f"Numero total de pacotes recebidos por segundo:", locale.format_string('%.2f', pckt_recv / exec_time, grouping=True))
+    print(f"Numero total de pacotes perdidos:", locale.format_string('%d', lost_pckt, grouping=True))
 
 
 
