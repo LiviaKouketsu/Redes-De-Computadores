@@ -60,7 +60,7 @@ def uploadTCP(sock):
     inicio = time.monotonic()
     while(time.monotonic() - inicio <= exec_time):
         print(time.monotonic() - inicio)
-        bytes_sent += sock.send((str(packet_sent).zfill(18)+"<>"+content).encode())             
+        bytes_sent += sock.send((str(packet_sent).zfill(18)+"<>"+content+"--").encode())             
         packet_sent += 1
 
     printDataUpload(packet_sent, bytes_sent)
@@ -130,13 +130,15 @@ def downloadTCP(sock):
     v.pop()     # Por algum motivo tem um pacote void??
 
     bytes_recv = 0
-    for pacote in v:
-        bytes_recv += len(pacote)
-        try:
-            identifier, _ = pacote.decode().split("<>") 
-            s.add(int(identifier))
-        except ValueError:
-            print(pacote.decode())
+    for conjunto in v:
+        bytes_recv += len(conjunto)
+        pacotesJuntos = conjunto.decode().split("--")
+        for pacote in pacotesJuntos:
+            try:
+                identifier, _ = pacote.decode().split("<>") 
+                s.add(int(identifier))
+            except ValueError:
+                print(pacote.decode())
 
     pckt_recv = len(v)
     lost_pckt = max(s) - (len(s) - 1)
