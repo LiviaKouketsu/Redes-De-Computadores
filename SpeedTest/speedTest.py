@@ -29,10 +29,10 @@ def printDataDownload(bytes_recv, pckt_recv, lost_pckt):
 
 
 
-def uploadUDP(sock, target):
+def uploadUDP(sock, addr):
     
     payload = "teste de rede *2025*"
-    content = (payload * (500 // len(payload))).encode()
+    content = (payload * ((500 // len(payload) - 1)))
     packet_sent = 0
     bytes_sent = 0
 
@@ -40,12 +40,8 @@ def uploadUDP(sock, target):
     inicio = time.monotonic()
     while(time.monotonic() - inicio <= exec_time):
         print(time.monotonic() - inicio)
-        bytes_sent += sock.sendto(content, target)
+        bytes_sent += sock.sendto((str(packet_sent).zfill(18)+"<>"+content).encode(), addr)
         packet_sent += 1
-
-    # Espera receber o pedido por numero de pacotes, então o retorna
-    sock.recvfrom(500)
-    sock.sendto(f"{packet_sent}".encode(), target)
 
     printDataUpload(packet_sent, bytes_sent)
     
@@ -56,7 +52,7 @@ def uploadUDP(sock, target):
 def uploadTCP(sock):
     
     payload = "teste de rede *2025*"
-    content = (payload * (500 // len(payload))).encode()
+    content = (payload * ((500 // len(payload) - 1)))
     packet_sent = 0
     bytes_sent = 0
 
@@ -64,12 +60,8 @@ def uploadTCP(sock):
     inicio = time.monotonic()
     while(time.monotonic() - inicio <= exec_time):
         print(time.monotonic() - inicio)
-        bytes_sent += sock.send(content)             
+        bytes_sent += sock.send((str(packet_sent).zfill(18)+"<>"+content).encode())             
         packet_sent += 1
-
-    # Espera receber o pedido por numero de pacotes, então o retorna
-    sock.recv(500)
-    sock.send(f"{packet_sent}".encode())
 
     printDataUpload(packet_sent, bytes_sent)
     
@@ -78,15 +70,11 @@ def uploadTCP(sock):
 
 
 def downloadUDP(sock):
-
-    bytes_recv = 0
-    pckt_recv = 0
-    lost_pckt = 0
+    s = set()
 
     # Pacote Inicial do "fluxo"
     data, addr = sock.recvfrom(500)
-    bytes_recv += len(data)
-    pckt_recv += 1
+    v = [data]
 
     # Define um timeout (garante que não fica travado esperando receber um pacote final no loop)
     sock.settimeout(1)
@@ -96,24 +84,22 @@ def downloadUDP(sock):
     while(time.monotonic() - inicio <= exec_time):
         print(time.monotonic() - inicio)
         # Tenta receber um pacote se passa do tempo de timeout sai do loop pela exceção socket.timeout
-        try: data, addr = sock.recvfrom(500)
-        except socket.timeout: break
-
-        bytes_recv += len(data)
-        pckt_recv += 1
-
-    # Desabilita o timeout e envia o pedido pelo numero de pacotes enviados
-    sock.settimeout(None)
-    sock.sendto("GET".encode(), addr)
-
-    # Espera receber o pacote com o numero de pacotes, desconsiderando os pacotes de teste de rede (que dão exception pq são diferentes de um inteiro)
-    # Repete o processo em caso de erro para tentar encontrar o pacote com o numero de pacotes
-    msg, addr = sock.recvfrom(500)
-    while not lost_pckt:
         try: 
-            lost_pckt = int(msg.decode()) - pckt_recv
-            break
-        except ValueError: msg, addr = sock.recvfrom(500)
+            data, addr = sock.recvfrom(500)
+            v.append(data)
+        except socket.timeout: break    
+
+    v.pop()     # Por algum motivo tem um pacote void??
+
+    bytes_recv = 0
+    for pacote in v:
+        bytes_recv += len(pacote)
+        identifier, _ = pacote.decode().split("<>") 
+        s.add(int(identifier))
+
+    pckt_recv = len(v)
+    lost_pckt = max(s) - (len(s) - 1)
+
 
     printDataDownload(bytes_recv, pckt_recv, lost_pckt)
 
@@ -122,15 +108,11 @@ def downloadUDP(sock):
 
 
 def downloadTCP(sock):
-
-    bytes_recv = 0
-    pckt_recv = 0
-    lost_pckt = 0
+    s = set()
 
     # Pacote Inicial do "fluxo"
     data = sock.recv(500)
-    bytes_recv += len(data)
-    pckt_recv += 1
+    v = [data]
 
     # Define um timeout (garante que não fica travado esperando receber um pacote final no loop)
     sock.settimeout(1)
@@ -140,24 +122,24 @@ def downloadTCP(sock):
     while(time.monotonic() - inicio <= exec_time):
         print(time.monotonic() - inicio)
         # Tenta receber um pacote se passa do tempo de timeout sai do loop pela exceção socket.timeout
-        try: data = sock.recv(500)
+        try: 
+            data = sock.recv(500)
+            v.append(data)
         except socket.timeout: break
 
-        bytes_recv += len(data)
-        pckt_recv += 1
+    v.pop()     # Por algum motivo tem um pacote void??
 
-    # Desabilita o timeout e envia o pedido pelo numero de pacotes enviados
-    sock.settimeout(None)
-    sock.send("GET".encode())
+    bytes_recv = 0
+    for pacote in v:
+        bytes_recv += len(pacote)
+        try:
+            identifier, _ = pacote.decode().split("<>") 
+            s.add(int(identifier))
+        except ValueError:
+            print(pacote.decode())
 
-    # Espera receber o pacote com o numero de pacotes, desconsiderando os pacotes de teste de rede (que dão exception pq são diferentes de um inteiro)
-    # Repete o processo em caso de erro para tentar encontrar o pacote com o numero de pacotes
-    msg = sock.recv(500)
-    while 1:
-        try: 
-            lost_pckt = int(msg.decode()) - pckt_recv
-            break
-        except ValueError: msg = sock.recv(500)
+    pckt_recv = len(v)
+    lost_pckt = max(s) - (len(s) - 1)
 
     printDataDownload(bytes_recv, pckt_recv, lost_pckt)
 
@@ -205,8 +187,6 @@ def speedTestTCP(host, port, execType):
 
         print("Iniciando teste de upload...")
         uploadTCP(sock)
-        
-        sock.close()
         
     elif execType == 'download':
         # Create a TCP socket
