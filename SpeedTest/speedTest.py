@@ -10,20 +10,20 @@ exec_time = 20
 
 def printDataUpload(packet_sent, bytes_sent):
     print(f"Numero total de bytes: ", locale.format_string('%.2f', bytes_sent, grouping=True))
-    print(f"Numero total de bits por segundo: ", locale.format_string('%.2f', (8*bytes_sent)/exec_time, grouping=True))
-    print(f"Numero de pacotes enviados: ", locale.format_string('%.2f', packet_sent, grouping=True))
-    print(f"Numero de pacotes enviados por segundo: ", locale.format_string('%.2f', packet_sent/exec_time, grouping=True))
+    print(f"Numero total de bits enviados por segundo: ", locale.format_string('%.2f', (8*bytes_sent)/exec_time, grouping=True))
+    print(f"Numero total de pacotes enviados: ", locale.format_string('%.2f', packet_sent, grouping=True))
+    print(f"Numero total de pacotes enviados por segundo: ", locale.format_string('%.2f', packet_sent/exec_time, grouping=True))
 
 
 
 
 
 def printDataDownload(bytes_recv, pckt_recv, lost_pckt):
-    print(f"Total de bytes recebidos: {bytes_recv}")
-    print(f"Total de bits recebidos por segundo: {(8*bytes_recv)/exec_time}")
-    print(f"Total de pacotes recebidos: {pckt_recv}")
-    print(f"Total de pacotes recebidos por segundo: {pckt_recv/exec_time}")
-    print(f"Total de pacotes perdidos: {lost_pckt}")
+    print(f"Numero total de bytes recebidos:", locale.format_string('%d', bytes_recv, grouping=True))
+    print(f"Numero total de bits recebidos por segundo:", locale.format_string('%.2f', (8*bytes_recv)/exec_time, grouping=True))
+    print(f"Numero total de pacotes recebidos:", locale.format_string('%d', pckt_recv, grouping=True))
+    print(f"Numero total de pacotes recebidos por segundo:", locale.format_string('%.2f', pckt_recv / exec_time, grouping=True))
+    print(f"Numero total de pacotes perdidos:", locale.format_string('%d', lost_pckt, grouping=True))
 
 
 
