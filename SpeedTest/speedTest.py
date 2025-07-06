@@ -40,7 +40,7 @@ def uploadUDP(sock, addr):
     inicio = time.monotonic()
     while(time.monotonic() - inicio <= exec_time):
         print(time.monotonic() - inicio)
-        bytes_sent += sock.sendto((str(packet_sent).zfill(18)+"<>"+content).encode(), addr)
+        bytes_sent += sock.sendto((str(packet_sent).zfill(16)+"<>"+content+"--").encode(), addr)
         packet_sent += 1
 
     printDataUpload(packet_sent, bytes_sent)
@@ -60,7 +60,7 @@ def uploadTCP(sock):
     inicio = time.monotonic()
     while(time.monotonic() - inicio <= exec_time):
         print(time.monotonic() - inicio)
-        bytes_sent += sock.send((str(packet_sent).zfill(18)+"<>"+content+"--").encode())             
+        bytes_sent += sock.send((str(packet_sent).zfill(16)+"<>"+content+"--").encode())             
         packet_sent += 1
 
     printDataUpload(packet_sent, bytes_sent)
@@ -87,15 +87,24 @@ def downloadUDP(sock):
         try: 
             data, addr = sock.recvfrom(500)
             v.append(data)
-        except socket.timeout: break    
+        except socket.timeout: break
 
     v.pop()     # Por algum motivo tem um pacote void??
 
+    buffer = ""
     bytes_recv = 0
-    for pacote in v:
-        bytes_recv += len(pacote)
-        identifier, _ = pacote.decode().split("<>") 
-        s.add(int(identifier))
+    for data in v:
+        bytes_recv += len(data)
+
+        buffer += data.decode()
+        while "--" in buffer:
+            pacote, buffer = buffer.split("--", 1)
+
+            try:
+                identifier, _ = pacote.split("<>") 
+                s.add(int(identifier))
+            except ValueError:
+                print(pacote)
 
     pckt_recv = len(v)
     lost_pckt = max(s) - (len(s) - 1)
@@ -129,16 +138,20 @@ def downloadTCP(sock):
 
     v.pop()     # Por algum motivo tem um pacote void??
 
+    buffer = ""
     bytes_recv = 0
-    for conjunto in v:
-        bytes_recv += len(conjunto)
-        pacotesJuntos = conjunto.decode().split("--")
-        for pacote in pacotesJuntos:
+    for data in v:
+        bytes_recv += len(data)
+
+        buffer += data.decode()
+        while "--" in buffer:
+            pacote, buffer = buffer.split("--", 1)
+
             try:
-                identifier, _ = pacote.decode().split("<>") 
+                identifier, _ = pacote.split("<>") 
                 s.add(int(identifier))
             except ValueError:
-                print(pacote.decode())
+                print(pacote)
 
     pckt_recv = len(v)
     lost_pckt = max(s) - (len(s) - 1)
