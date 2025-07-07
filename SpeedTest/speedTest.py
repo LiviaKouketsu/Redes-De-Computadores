@@ -179,10 +179,10 @@ def downloadTCP(sock):
     # Espera receber o pacote com o numero de pacotes, desconsiderando os pacotes de teste de rede (que dão exception pq são diferentes de um inteiro)
     # Repete o processo em caso de erro para tentar encontrar o pacote com o numero de pacotes
     pckt_sent = 0
-    msg, _ = sock.recv(500)
+    msg = sock.recv(500)
     while not pckt_sent:
         try: pckt_sent = int(msg.decode())
-        except ValueError: msg, _ = sock.recv(500)
+        except ValueError: msg = sock.recv(500)
     
     lost_pckt = pckt_sent - (pckt_recv2 - 1)
 
