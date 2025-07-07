@@ -2,7 +2,6 @@ import socket
 import time
 import locale
 import threading
-import asyncio
 
 
 
@@ -40,7 +39,7 @@ def printDataDownload(bytes_recv, pckt_recv, lost_pckt):
 
 
 
-async def uploadUDP(sock, addr):
+def uploadUDP(sock, addr):
     
     payload = "teste de rede *2025*"
     content = ("<>" + (payload * ((500 // len(payload) - 1))) + "--").encode()
