@@ -131,7 +131,7 @@ def downloadUDP(sock):
         try: pckt_sent = int(msg.decode())
         except ValueError: msg, _ = sock.recvfrom(500)
 
-    lost_pckt = pckt_sent - (pckt_recv2 - 1)
+    lost_pckt = pckt_sent - pckt_recv2
 
     printDataDownload(bytes_recv, pckt_recv, lost_pckt)
 
@@ -184,7 +184,7 @@ def downloadTCP(sock):
         try: pckt_sent = int(msg.decode())
         except ValueError: msg = sock.recv(500)
     
-    lost_pckt = pckt_sent - (pckt_recv2 - 1)
+    lost_pckt = pckt_sent - pckt_recv2
 
     printDataDownload(bytes_recv, pckt_recv, lost_pckt)
 
