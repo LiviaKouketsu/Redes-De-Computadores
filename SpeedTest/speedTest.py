@@ -7,16 +7,15 @@ locale.setlocale(locale.LC_ALL, 'pt_BR.UTF-8')
 
 
 payload = "teste de rede *2025*"
-content = ((payload * (498 // len(payload))) + "--").encode()
-
-
-def timer():
-    for i in range(1, 20):
-        time.sleep(1)
-        if i: print(i)
-
+content = (payload * (498 // len(payload))).encode() + payload[:18].encode() + b"--"
 
 exec_time = 20
+
+def timer():
+    for i in range(1, exec_time):
+        time.sleep(1)
+        print(i)
+
 t1 = threading.Thread(target=timer)
 
 
@@ -107,16 +106,16 @@ def downloadUDP(sock):
             v.append(data)
         except socket.timeout: continue
 
-    v2 = []
     buffer = ""
     bytes_recv = 0
+    pckt_recv2 = 0
     for data in v:
         bytes_recv += len(data)
 
         buffer += data.decode()
         while "--" in buffer:
             pacote, buffer = buffer.split("--", 1)
-            v2.append(pacote)
+            pckt_recv2 += 1
 
     pckt_recv = len(v)
     
@@ -132,7 +131,7 @@ def downloadUDP(sock):
         try: pckt_sent = int(msg.decode())
         except ValueError: msg, _ = sock.recvfrom(500)
 
-    lost_pckt = pckt_sent - (len(v2) - 1)
+    lost_pckt = pckt_sent - (pckt_recv2 - 1)
 
     printDataDownload(bytes_recv, pckt_recv, lost_pckt)
 
@@ -160,16 +159,16 @@ def downloadTCP(sock):
             v.append(data)
         except socket.timeout: continue
 
-    v2 = []
     buffer = ""
     bytes_recv = 0
+    pckt_recv2 = 0
     for data in v:
         bytes_recv += len(data)
 
         buffer += data.decode()
         while "--" in buffer:
             pacote, buffer = buffer.split("--", 1)
-            v2.append(pacote)
+            pckt_recv2 += 1
 
     pckt_recv = len(v)
 
@@ -185,7 +184,7 @@ def downloadTCP(sock):
         try: pckt_sent = int(msg.decode())
         except ValueError: msg, _ = sock.recv(500)
     
-    lost_pckt = pckt_sent - (len(v2) - 1)
+    lost_pckt = pckt_sent - (pckt_recv2 - 1)
 
     printDataDownload(bytes_recv, pckt_recv, lost_pckt)
 
