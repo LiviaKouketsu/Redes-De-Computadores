@@ -1,8 +1,18 @@
 import socket
 import time
 import locale
+import threading
+
+
+
+def timer():
+    for i in range(1, 20):
+        time.sleep(1)
+        if i: print(i)
+
 
 exec_time = 20
+t1 = threading.Thread(target=timer)
 
 
 
@@ -38,8 +48,8 @@ def uploadUDP(sock, addr):
 
     # Loop de (exec_time) segundos
     inicio = time.monotonic()
+    t1.start()
     while(time.monotonic() - inicio <= exec_time):
-        print(time.monotonic() - inicio)
         bytes_sent += sock.sendto((str(packet_sent).zfill(16)+"<>"+content+"--").encode(), addr)
         packet_sent += 1
 
@@ -58,8 +68,8 @@ def uploadTCP(sock):
 
     # Loop de (exec_time) segundos
     inicio = time.monotonic()
+    t1.start()
     while(time.monotonic() - inicio <= exec_time):
-        print(time.monotonic() - inicio)
         bytes_sent += sock.send((str(packet_sent).zfill(16)+"<>"+content+"--").encode())             
         packet_sent += 1
 
@@ -81,13 +91,13 @@ def downloadUDP(sock):
     
     # Loop de (exec_time) segundos
     inicio = time.monotonic()
+    t1.start()
     while(time.monotonic() - inicio <= exec_time):
-        print(time.monotonic() - inicio)
         # Tenta receber um pacote se passa do tempo de timeout sai do loop pela exceção socket.timeout
         try: 
             data, addr = sock.recvfrom(500)
             v.append(data)
-        except socket.timeout: break
+        except socket.timeout: continue
 
     v.pop()     # Por algum motivo tem um pacote void??
 
@@ -103,8 +113,7 @@ def downloadUDP(sock):
             try:
                 identifier, _ = pacote.split("<>") 
                 s.add(int(identifier))
-            except ValueError:
-                print(pacote)
+            except ValueError: continue
 
     pckt_recv = len(v)
     lost_pckt = max(s) - (len(s) - 1)
@@ -128,13 +137,13 @@ def downloadTCP(sock):
     
     #Contagem de 20 segundos de envio 
     inicio = time.monotonic()
+    t1.start()
     while(time.monotonic() - inicio <= exec_time):
-        print(time.monotonic() - inicio)
         # Tenta receber um pacote se passa do tempo de timeout sai do loop pela exceção socket.timeout
         try: 
             data = sock.recv(500)
             v.append(data)
-        except socket.timeout: break
+        except socket.timeout: continue
 
     v.pop()     # Por algum motivo tem um pacote void??
 
@@ -150,8 +159,7 @@ def downloadTCP(sock):
             try:
                 identifier, _ = pacote.split("<>") 
                 s.add(int(identifier))
-            except ValueError:
-                print(pacote)
+            except ValueError: continue
 
     pckt_recv = len(v)
     lost_pckt = max(s) - (len(s) - 1)
