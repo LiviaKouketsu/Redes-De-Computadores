@@ -74,7 +74,9 @@ def uploadUDP(sock, addr):
 
     sock.settimeout(None)
     msg, _ = sock.recvfrom(500)
+    while b"><" not in msg: msg, _ = sock.recvfrom(500)
     bytes_recv, pckt_recv, lost_pckt, lenghtS = msg.decode().split("><")
+    
     sock.sendto(f"{packet_sent}><{bytes_sent}".encode(), addr)
 
     print(f"\nTaxa de UPLOAD nessa maquina({socket.gethostbyname(socket.gethostname())}):")
@@ -101,7 +103,10 @@ def uploadTCP(sock):
         packet_sent += 1
 
     sock.settimeout(None)
-    bytes_recv, pckt_recv, lost_pckt, lenghtS = sock.recv(500).decode().split("><")
+    msg = sock.recv(500)
+    while b"><" not in msg: msg = sock.recv(500)
+    bytes_recv, pckt_recv, lost_pckt, lenghtS = msg.decode().split("><")
+
     sock.send(f"{packet_sent}><{bytes_sent}".encode())
     
     print(f"\nTaxa de UPLOAD nessa maquina({socket.gethostbyname(socket.gethostname())}):")
@@ -153,14 +158,12 @@ def downloadUDP(sock):
     pckt_recv = len(v)
     lost_pckt = max(s) - (len(s) - 1)
 
-
     sock.settimeout(None)
     sock.sendto(f"{bytes_recv}><{pckt_recv}><{lost_pckt}><{len(s)}".encode(), addr)
+    
     msg, _ = sock.recvfrom(500)
-    while b"><" not in msg:
-        msg, _ = sock.recvfrom(500)
-    try: packet_sent, bytes_sent = msg.decode().split("><")
-    except: print(msg.decode())
+    while b"><" not in msg: msg, _ = sock.recvfrom(500)
+    packet_sent, bytes_sent = msg.decode().split("><")
 
     non_recv = int(packet_sent) - len(s)
     print(f"\nTaxa de DOWNLOAD nessa maquina({socket.gethostbyname(socket.gethostname())}):")
@@ -213,9 +216,9 @@ def downloadTCP(sock):
 
     sock.settimeout(None)
     sock.send(f"{bytes_recv}><{pckt_recv}><{lost_pckt}><{len(s)}".encode())
+    
     msg = sock.recv(500)
-    while b"><" not in msg:
-        msg = sock.recv(500)
+    while b"><" not in msg: msg = sock.recv(500)
     packet_sent, bytes_sent = msg.decode().split("><")
 
     non_recv = int(packet_sent) - len(s)
