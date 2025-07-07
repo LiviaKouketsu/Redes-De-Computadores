@@ -21,13 +21,20 @@ t1 = threading.Thread(target=timer)
 
 
 
+tipo = input("UDP ou TCP: ").lower()
+host = input("Entre com o endereço a ser conectado: ")
+port = int(input("Digite a porta a ser utilizada: "))
+mode = input("Modo de execução (upload, download): ")
+
+
+
 
 
 def printDataUpload(packet_sent, bytes_sent):
-    print(f"Numero total de bytes: ", locale.format_string('%.2f', bytes_sent, grouping=True))
+    print(f"Numero total de bytes: ", locale.format_string('%d', bytes_sent, grouping=True))
     print(f"Numero total de bits enviados por segundo: ", locale.format_string('%.2f', (8*bytes_sent)/exec_time, grouping=True))
-    print(f"Numero total de pacotes enviados: ", locale.format_string('%.2f', packet_sent, grouping=True))
-    print(f"Numero total de pacotes enviados por segundo: ", locale.format_string('%.2f', packet_sent/exec_time, grouping=True))
+    print(f"Numero total de pacotes enviados: ", locale.format_string('%d', packet_sent, grouping=True))
+    print(f"Numero total de pacotes enviados por segundo: ", locale.format_string('%d', packet_sent/exec_time, grouping=True))
 
 
 
@@ -57,8 +64,16 @@ def uploadUDP(sock, addr):
         bytes_sent += sock.sendto(b''.join([str(packet_sent).zfill(16).encode(), content]), addr)
         packet_sent += 1
 
+    print(f"\nTaxa de UPLOAD nessa maquina({socket.gethostbyname(socket.gethostname())}):")
     printDataUpload(packet_sent, bytes_sent)
-    
+
+    sock.settimeout(None)
+    msg, _ = sock.recvfrom(500)
+    bytes_recv, pckt_recv, lost_pckt = msg.decode().split("><")
+    sock.sendto(f"{packet_sent}><{bytes_sent}".encode(), addr)
+
+    print(f"\nTaxa de DOWNLOAD na outra maquina({host}):")
+    printDataDownload(int(bytes_recv), int(pckt_recv), int(lost_pckt))
 
 
 
@@ -76,7 +91,15 @@ def uploadTCP(sock):
         bytes_sent += sock.send(b''.join([str(packet_sent).zfill(16).encode(), content]))             
         packet_sent += 1
 
+    print(f"\nTaxa de UPLOAD nessa maquina({socket.gethostbyname(socket.gethostname())}):")
     printDataUpload(packet_sent, bytes_sent)
+
+    sock.settimeout(None)
+    bytes_recv, pckt_recv, lost_pckt = sock.recv(500).decode().split("><")
+    sock.send(f"{packet_sent}><{bytes_sent}".encode())
+
+    print(f"\nTaxa de DOWNLOAD na outra maquina({host}):")
+    printDataDownload(int(bytes_recv), int(pckt_recv), int(lost_pckt))
     
 
 
@@ -120,8 +143,16 @@ def downloadUDP(sock):
     pckt_recv = len(v)
     lost_pckt = max(s) - (len(s) - 1)
 
-
+    print(f"\nTaxa de DOWNLOAD nessa maquina({socket.gethostbyname(socket.gethostname())}):")
     printDataDownload(bytes_recv, pckt_recv, lost_pckt)
+
+    sock.settimeout(None)
+    sock.sendto(f"{bytes_recv}><{pckt_recv}><{lost_pckt}".encode(), addr)
+    msg, _ = sock.recvfrom(500)
+    packet_sent, bytes_sent = msg.decode().split("><")
+
+    print(f"\nTaxa de UPLOAD na outra maquina({host}):")
+    printDataUpload(int(packet_sent), int(bytes_sent))
 
 
 
@@ -165,7 +196,15 @@ def downloadTCP(sock):
     pckt_recv = len(v)
     lost_pckt = max(s) - (len(s) - 1)
 
+    print(f"\nTaxa de DOWNLOAD nessa maquina({socket.gethostbyname(socket.gethostname())}):")
     printDataDownload(bytes_recv, pckt_recv, lost_pckt)
+
+    sock.settimeout(None)
+    sock.send(f"{bytes_recv}><{pckt_recv}><{lost_pckt}".encode())
+    packet_sent, bytes_sent = sock.recv(500).decode().split("><")
+
+    print(f"\nTaxa de UPLOAD na outra maquina({host}):")
+    printDataUpload(int(packet_sent), int(bytes_sent))
 
 
 
@@ -227,14 +266,6 @@ def speedTestTCP(host, port, execType):
 
     else: print("tipo de execução inválido.")
 
-
-
-
-
-tipo = input("UDP ou TCP: ").lower()
-host = input("Entre com o endereço a ser conectado: ")
-port = int(input("Digite a porta a ser utilizada: "))
-mode = input("Modo de execução (upload, download): ")
 
 if   tipo.lower() == 'udp':
     speedTestUDP(host, port, mode)
