@@ -13,7 +13,7 @@ content = ("<>" + (payload * ((500 // len(payload) - 1))) + "--").encode()
 exec_time = 20
 
 def timer():
-    for i in range(1, exec_time):
+    for i in range(1, exec_time + 1):
         time.sleep(1)
         print(i)
 
@@ -34,7 +34,7 @@ def printDataUpload(packet_sent, bytes_sent):
     print(f"Numero total de bytes: ", locale.format_string('%d', bytes_sent, grouping=True))
     print(f"Numero total de bits enviados por segundo: ", locale.format_string('%.2f', (8*bytes_sent)/exec_time, grouping=True))
     print(f"Numero total de pacotes enviados: ", locale.format_string('%d', packet_sent, grouping=True))
-    print(f"Numero total de pacotes enviados por segundo: ", locale.format_string('%d', packet_sent/exec_time, grouping=True))
+    print(f"Numero total de pacotes enviados por segundo: ", locale.format_string('%.2f', packet_sent/exec_time, grouping=True))
 
 
 
@@ -149,7 +149,10 @@ def downloadUDP(sock):
     sock.settimeout(None)
     sock.sendto(f"{bytes_recv}><{pckt_recv}><{lost_pckt}".encode(), addr)
     msg, _ = sock.recvfrom(500)
-    packet_sent, bytes_sent = msg.decode().split("><")
+    while b"><" not in msg:
+        msg, _ = sock.recvfrom(500)
+    try: packet_sent, bytes_sent = msg.decode().split("><")
+    except: print(msg.decode())
 
     print(f"\nTaxa de UPLOAD na outra maquina({host}):")
     printDataUpload(int(packet_sent), int(bytes_sent))
@@ -201,7 +204,10 @@ def downloadTCP(sock):
 
     sock.settimeout(None)
     sock.send(f"{bytes_recv}><{pckt_recv}><{lost_pckt}".encode())
-    packet_sent, bytes_sent = sock.recv(500).decode().split("><")
+    msg = sock.recv(500)
+    while b"><" not in msg:
+        msg = sock.recv(500)
+    packet_sent, bytes_sent = msg.decode().split("><")
 
     print(f"\nTaxa de UPLOAD na outra maquina({host}):")
     printDataUpload(int(packet_sent), int(bytes_sent))
