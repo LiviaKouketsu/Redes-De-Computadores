@@ -8,7 +8,7 @@ locale.setlocale(locale.LC_ALL, 'pt_BR.UTF-8')
 
 
 payload = "teste de rede *2025*"
-content = (payload * (498 // len(payload))).encode() + payload[:18].encode() + b"--"
+content = ("<>" + (payload * ((500 // len(payload) - 1))) + "--").encode()
 
 exec_time = 20
 
@@ -46,8 +46,6 @@ def printDataDownload(bytes_recv, pckt_recv, lost_pckt):
 
 def uploadUDP(sock, addr):
     
-    payload = "teste de rede *2025*"
-    content = ("<>" + (payload * ((500 // len(payload) - 1))) + "--").encode()
     packet_sent = 0
     bytes_sent = 0
 
@@ -67,8 +65,6 @@ def uploadUDP(sock, addr):
 
 def uploadTCP(sock):
     
-    payload = "teste de rede *2025*"
-    content = ("<>" + (payload * ((500 // len(payload) - 1))) + "--").encode()
     packet_sent = 0
     bytes_sent = 0
 
