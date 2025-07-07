@@ -2,6 +2,7 @@ import socket
 import time
 import locale
 import threading
+import asyncio
 
 
 
@@ -39,18 +40,19 @@ def printDataDownload(bytes_recv, pckt_recv, lost_pckt):
 
 
 
-def uploadUDP(sock, addr):
+async def uploadUDP(sock, addr):
     
     payload = "teste de rede *2025*"
-    content = (payload * ((500 // len(payload) - 1)))
+    content = ("<>" + (payload * ((500 // len(payload) - 1))) + "--").encode()
     packet_sent = 0
     bytes_sent = 0
 
     # Loop de (exec_time) segundos
     inicio = time.monotonic()
+    tempo = exec_time + inicio
     t1.start()
-    while(time.monotonic() - inicio <= exec_time):
-        bytes_sent += sock.sendto((str(packet_sent).zfill(16)+"<>"+content+"--").encode(), addr)
+    while(time.monotonic() < tempo):
+        bytes_sent += sock.sendto(b''.join([str(packet_sent).zfill(16).encode(), content]), addr)
         packet_sent += 1
 
     printDataUpload(packet_sent, bytes_sent)
@@ -62,15 +64,16 @@ def uploadUDP(sock, addr):
 def uploadTCP(sock):
     
     payload = "teste de rede *2025*"
-    content = (payload * ((500 // len(payload) - 1)))
+    content = ("<>" + (payload * ((500 // len(payload) - 1))) + "--").encode()
     packet_sent = 0
     bytes_sent = 0
 
     # Loop de (exec_time) segundos
     inicio = time.monotonic()
+    tempo = exec_time + inicio
     t1.start()
-    while(time.monotonic() - inicio <= exec_time):
-        bytes_sent += sock.send((str(packet_sent).zfill(16)+"<>"+content+"--").encode())             
+    while(time.monotonic() < tempo):
+        bytes_sent += sock.send(b''.join([str(packet_sent).zfill(16).encode(), content]))             
         packet_sent += 1
 
     printDataUpload(packet_sent, bytes_sent)
@@ -87,19 +90,18 @@ def downloadUDP(sock):
     v = [data]
 
     # Define um timeout (garante que não fica travado esperando receber um pacote final no loop)
-    sock.settimeout(1)
+    sock.settimeout(0.1)
     
     # Loop de (exec_time) segundos
     inicio = time.monotonic()
+    tempo = exec_time + inicio
     t1.start()
-    while(time.monotonic() - inicio <= exec_time):
+    while(time.monotonic() < tempo):
         # Tenta receber um pacote se passa do tempo de timeout sai do loop pela exceção socket.timeout
         try: 
             data, addr = sock.recvfrom(500)
             v.append(data)
         except socket.timeout: continue
-
-    v.pop()     # Por algum motivo tem um pacote void??
 
     buffer = ""
     bytes_recv = 0
@@ -133,19 +135,18 @@ def downloadTCP(sock):
     v = [data]
 
     # Define um timeout (garante que não fica travado esperando receber um pacote final no loop)
-    sock.settimeout(1)
+    sock.settimeout(0.1)
     
     #Contagem de 20 segundos de envio 
     inicio = time.monotonic()
+    tempo = exec_time + inicio
     t1.start()
-    while(time.monotonic() - inicio <= exec_time):
+    while(time.monotonic() < tempo):
         # Tenta receber um pacote se passa do tempo de timeout sai do loop pela exceção socket.timeout
         try: 
             data = sock.recv(500)
             v.append(data)
         except socket.timeout: continue
-
-    v.pop()     # Por algum motivo tem um pacote void??
 
     buffer = ""
     bytes_recv = 0
