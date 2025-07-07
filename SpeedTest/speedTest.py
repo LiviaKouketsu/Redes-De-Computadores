@@ -3,6 +3,11 @@ import time
 import locale
 import threading
 
+locale.setlocale(locale.LC_ALL, 'pt_BR.UTF-8')
+
+
+payload = "teste de rede *2025*"
+content = ((payload * (498 // len(payload))) + "--").encode()
 
 
 def timer():
@@ -41,8 +46,6 @@ def printDataDownload(bytes_recv, pckt_recv, lost_pckt):
 
 def uploadUDP(sock, addr):
     
-    payload = "teste de rede *2025*"
-    content = ("<>" + (payload * ((500 // len(payload) - 1))) + "--").encode()
     packet_sent = 0
     bytes_sent = 0
 
@@ -51,8 +54,11 @@ def uploadUDP(sock, addr):
     tempo = exec_time + inicio
     t1.start()
     while(time.monotonic() < tempo):
-        bytes_sent += sock.sendto(b''.join([str(packet_sent).zfill(16).encode(), content]), addr)
+        bytes_sent += sock.sendto(content, addr)
         packet_sent += 1
+    
+    sock.recvfrom(500)
+    sock.sendto(f"{packet_sent}".encode(), addr)
 
     printDataUpload(packet_sent, bytes_sent)
     
@@ -62,8 +68,6 @@ def uploadUDP(sock, addr):
 
 def uploadTCP(sock):
     
-    payload = "teste de rede *2025*"
-    content = ("<>" + (payload * ((500 // len(payload) - 1))) + "--").encode()
     packet_sent = 0
     bytes_sent = 0
 
@@ -72,8 +76,11 @@ def uploadTCP(sock):
     tempo = exec_time + inicio
     t1.start()
     while(time.monotonic() < tempo):
-        bytes_sent += sock.send(b''.join([str(packet_sent).zfill(16).encode(), content]))             
+        bytes_sent += sock.send(content)             
         packet_sent += 1
+
+    sock.recvfrom(500)
+    sock.send(f"{packet_sent}".encode())
 
     printDataUpload(packet_sent, bytes_sent)
     
@@ -82,8 +89,6 @@ def uploadTCP(sock):
 
 
 def downloadUDP(sock):
-    s = set()
-
     # Pacote Inicial do "fluxo"
     data, addr = sock.recvfrom(500)
     v = [data]
@@ -102,6 +107,7 @@ def downloadUDP(sock):
             v.append(data)
         except socket.timeout: continue
 
+    v2 = []
     buffer = ""
     bytes_recv = 0
     for data in v:
@@ -110,15 +116,23 @@ def downloadUDP(sock):
         buffer += data.decode()
         while "--" in buffer:
             pacote, buffer = buffer.split("--", 1)
-
-            try:
-                identifier, _ = pacote.split("<>") 
-                s.add(int(identifier))
-            except ValueError: continue
+            v2.append(pacote)
 
     pckt_recv = len(v)
-    lost_pckt = max(s) - (len(s) - 1)
+    
+    # Desabilita o timeout e envia o pedido pelo numero de pacotes enviados
+    sock.settimeout(None)
+    sock.sendto("GET".encode(), addr)
 
+    # Espera receber o pacote com o numero de pacotes, desconsiderando os pacotes de teste de rede (que dão exception pq são diferentes de um inteiro)
+    # Repete o processo em caso de erro para tentar encontrar o pacote com o numero de pacotes
+    pckt_sent = 0
+    msg, _ = sock.recvfrom(500)
+    while not pckt_sent:
+        try: pckt_sent = int(msg.decode())
+        except ValueError: msg, _ = sock.recvfrom(500)
+
+    lost_pckt = pckt_sent - (len(v2) - 1)
 
     printDataDownload(bytes_recv, pckt_recv, lost_pckt)
 
@@ -127,7 +141,6 @@ def downloadUDP(sock):
 
 
 def downloadTCP(sock):
-    s = set()
 
     # Pacote Inicial do "fluxo"
     data = sock.recv(500)
@@ -147,6 +160,7 @@ def downloadTCP(sock):
             v.append(data)
         except socket.timeout: continue
 
+    v2 = []
     buffer = ""
     bytes_recv = 0
     for data in v:
@@ -155,14 +169,23 @@ def downloadTCP(sock):
         buffer += data.decode()
         while "--" in buffer:
             pacote, buffer = buffer.split("--", 1)
-
-            try:
-                identifier, _ = pacote.split("<>") 
-                s.add(int(identifier))
-            except ValueError: continue
+            v2.append(pacote)
 
     pckt_recv = len(v)
-    lost_pckt = max(s) - (len(s) - 1)
+
+    # Desabilita o timeout e envia o pedido pelo numero de pacotes enviados
+    sock.settimeout(None)
+    sock.send("GET".encode())
+
+    # Espera receber o pacote com o numero de pacotes, desconsiderando os pacotes de teste de rede (que dão exception pq são diferentes de um inteiro)
+    # Repete o processo em caso de erro para tentar encontrar o pacote com o numero de pacotes
+    pckt_sent = 0
+    msg, _ = sock.recv(500)
+    while not pckt_sent:
+        try: pckt_sent = int(msg.decode())
+        except ValueError: msg, _ = sock.recv(500)
+    
+    lost_pckt = pckt_sent - (len(v2) - 1)
 
     printDataDownload(bytes_recv, pckt_recv, lost_pckt)
 
