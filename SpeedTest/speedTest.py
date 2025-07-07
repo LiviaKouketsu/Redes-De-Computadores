@@ -4,14 +4,19 @@ import locale
 import threading
 
 
+locale.setlocale(locale.LC_ALL, 'pt_BR.UTF-8')
 
-def timer():
-    for i in range(1, 20):
-        time.sleep(1)
-        if i: print(i)
 
+payload = "teste de rede *2025*"
+content = (payload * (498 // len(payload))).encode() + payload[:18].encode() + b"--"
 
 exec_time = 20
+
+def timer():
+    for i in range(1, exec_time):
+        time.sleep(1)
+        print(i)
+
 t1 = threading.Thread(target=timer)
 
 
