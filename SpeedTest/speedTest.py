@@ -72,13 +72,13 @@ def uploadUDP(sock, addr):
         bytes_sent += sock.sendto(b''.join([str(packet_sent).zfill(16).encode(), content]), addr)
         packet_sent += 1
 
-    print(f"\nTaxa de UPLOAD nessa maquina({socket.gethostbyname(socket.gethostname())}):")
-    printDataUpload(packet_sent, bytes_sent)
-
     sock.settimeout(10)
     try:
         msg, _ = sock.recvfrom(500)
         bytes_recv, pckt_recv, lost_pckt, lenghtS = msg.decode().split("><")
+
+        print(f"\nTaxa de UPLOAD nessa maquina({socket.gethostbyname(socket.gethostname())}):")
+        printDataUpload(packet_sent, bytes_sent)
     
         non_recv = packet_sent - int(lenghtS)
 
@@ -104,13 +104,13 @@ def uploadTCP(sock):
         bytes_sent += sock.send(b''.join([str(packet_sent).zfill(16).encode(), content]))             
         packet_sent += 1
 
-    print(f"\nTaxa de UPLOAD nessa maquina({socket.gethostbyname(socket.gethostname())}):")
-    printDataUpload(packet_sent, bytes_sent)
-
     sock.settimeout(10)
     try:
         msg = sock.recv(500)
         bytes_recv, pckt_recv, lost_pckt, lenghtS = msg.decode().split("><")
+
+        print(f"\nTaxa de UPLOAD nessa maquina({socket.gethostbyname(socket.gethostname())}):")
+        printDataUpload(packet_sent, bytes_sent)
         
         non_recv = packet_sent - int(lenghtS)
 
