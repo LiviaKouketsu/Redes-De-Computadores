@@ -72,19 +72,21 @@ def uploadUDP(sock, addr):
         bytes_sent += sock.sendto(b''.join([str(packet_sent).zfill(16).encode(), content]), addr)
         packet_sent += 1
 
-    sock.settimeout(None)
-    msg, _ = sock.recvfrom(500)
-    while b"><" not in msg: msg, _ = sock.recvfrom(500)
-    bytes_recv, pckt_recv, lost_pckt, lenghtS = msg.decode().split("><")
-    
-    sock.sendto(f"{packet_sent}><{bytes_sent}".encode(), addr)
-
     print(f"\nTaxa de UPLOAD nessa maquina({socket.gethostbyname(socket.gethostname())}):")
     printDataUpload(packet_sent, bytes_sent)
 
-    non_recv = packet_sent - int(lenghtS)
-    print(f"\nTaxa de DOWNLOAD na outra maquina({host}):")
-    printDataDownload(int(bytes_recv), int(pckt_recv), int(lost_pckt), non_recv)
+    sock.settimeout(10)
+    try:
+        msg, _ = sock.recvfrom(500)
+        bytes_recv, pckt_recv, lost_pckt, lenghtS = msg.decode().split("><")
+    
+        non_recv = packet_sent - int(lenghtS)
+
+        print(f"\nTaxa de DOWNLOAD na outra maquina({host}):")
+        printDataDownload(int(bytes_recv), int(pckt_recv), int(lost_pckt), non_recv)
+    except socket.timeout: print("Pacote referente a outra maquina não recebido")
+
+    sock.sendto(f"{packet_sent}><{bytes_sent}".encode(), addr)
 
 
 
@@ -102,19 +104,21 @@ def uploadTCP(sock):
         bytes_sent += sock.send(b''.join([str(packet_sent).zfill(16).encode(), content]))             
         packet_sent += 1
 
-    sock.settimeout(None)
-    msg = sock.recv(500)
-    while b"><" not in msg: msg = sock.recv(500)
-    bytes_recv, pckt_recv, lost_pckt, lenghtS = msg.decode().split("><")
-
-    sock.send(f"{packet_sent}><{bytes_sent}".encode())
-    
     print(f"\nTaxa de UPLOAD nessa maquina({socket.gethostbyname(socket.gethostname())}):")
     printDataUpload(packet_sent, bytes_sent)
 
-    non_recv = packet_sent - int(lenghtS)
-    print(f"\nTaxa de DOWNLOAD na outra maquina({host}):")
-    printDataDownload(int(bytes_recv), int(pckt_recv), int(lost_pckt), non_recv)
+    sock.settimeout(10)
+    try:
+        msg = sock.recv(500)
+        bytes_recv, pckt_recv, lost_pckt, lenghtS = msg.decode().split("><")
+        
+        non_recv = packet_sent - int(lenghtS)
+
+        print(f"\nTaxa de DOWNLOAD na outra maquina({host}):")
+        printDataDownload(int(bytes_recv), int(pckt_recv), int(lost_pckt), non_recv)
+    except socket.timeout: print("Pacote referente a outra maquina não recebido")
+    
+    sock.send(f"{packet_sent}><{bytes_sent}".encode())
     
 
 
@@ -158,20 +162,22 @@ def downloadUDP(sock):
     pckt_recv = len(v)
     lost_pckt = max(s) - (len(s) - 1)
 
-    sock.settimeout(None)
+    sock.settimeout(10)
     sock.sendto(f"{bytes_recv}><{pckt_recv}><{lost_pckt}><{len(s)}".encode(), addr)
     
-    msg, _ = sock.recvfrom(500)
-    while b"><" not in msg: msg, _ = sock.recvfrom(500)
-    packet_sent, bytes_sent = msg.decode().split("><")
-
     non_recv = int(packet_sent) - len(s)
     print(f"\nTaxa de DOWNLOAD nessa maquina({socket.gethostbyname(socket.gethostname())}):")
     printDataDownload(bytes_recv, pckt_recv, lost_pckt, non_recv)
 
-    print(f"\nTaxa de UPLOAD na outra maquina({host}):")
-    printDataUpload(int(packet_sent), int(bytes_sent))
+    try:
+        msg, _ = sock.recvfrom(500)
+        while b"><" not in msg: msg, _ = sock.recvfrom(500)
+        packet_sent, bytes_sent = msg.decode().split("><")
 
+
+        print(f"\nTaxa de UPLOAD na outra maquina({host}):")
+        printDataUpload(int(packet_sent), int(bytes_sent))
+    except socket.timeout: print("Pacote referente a outra maquina não recebido")
 
 
 
@@ -214,19 +220,22 @@ def downloadTCP(sock):
     pckt_recv = len(v)
     lost_pckt = max(s) - (len(s) - 1)
 
-    sock.settimeout(None)
+    
     sock.send(f"{bytes_recv}><{pckt_recv}><{lost_pckt}><{len(s)}".encode())
     
-    msg = sock.recv(500)
-    while b"><" not in msg: msg = sock.recv(500)
-    packet_sent, bytes_sent = msg.decode().split("><")
-
     non_recv = int(packet_sent) - len(s)
     print(f"\nTaxa de DOWNLOAD nessa maquina({socket.gethostbyname(socket.gethostname())}):")
     printDataDownload(bytes_recv, pckt_recv, lost_pckt, non_recv)
 
-    print(f"\nTaxa de UPLOAD na outra maquina({host}):")
-    printDataUpload(int(packet_sent), int(bytes_sent))
+    sock.settimeout(10)
+    try:
+        msg = sock.recv(500)
+        while b"><" not in msg: msg = sock.recv(500)
+        packet_sent, bytes_sent = msg.decode().split("><")
+
+        print(f"\nTaxa de UPLOAD na outra maquina({host}):")
+        printDataUpload(int(packet_sent), int(bytes_sent))
+    except socket.timeout: print("Pacote referente a outra maquina não recebido")
 
 
 
