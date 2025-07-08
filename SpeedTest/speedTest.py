@@ -56,22 +56,10 @@ def printDataDownload(bytes_recv, pckt_recv, lost_pckt, non_recv):
     print(f"Numero total de pacotes não recebidos:", locale.format_string('%d', non_recv, grouping=True), "\n")
 
 
+# UPLOAD UDP ---------------------------------------------------------------------------------------------------------------
 
 
-
-def uploadUDP(sock, addr):
-    
-    packet_sent = 0
-    bytes_sent = 0
-
-    # Loop de (exec_time) segundos
-    inicio = time.monotonic()
-    tempo = exec_time + inicio
-    t1.start()
-    while(time.monotonic() < tempo):
-        bytes_sent += sock.sendto(b''.join([str(packet_sent).zfill(16).encode(), content]), addr)
-        packet_sent += 1
-
+def printUploadUDP(sock, addr, packet_sent, bytes_sent):
     sock.settimeout(10)
     try:
         msg, _ = sock.recvfrom(500)
@@ -90,8 +78,7 @@ def uploadUDP(sock, addr):
 
 
 
-
-def uploadTCP(sock):
+def uploadUDP(sock, addr):
     
     packet_sent = 0
     bytes_sent = 0
@@ -101,9 +88,16 @@ def uploadTCP(sock):
     tempo = exec_time + inicio
     t1.start()
     while(time.monotonic() < tempo):
-        bytes_sent += sock.send(b''.join([str(packet_sent).zfill(16).encode(), content]))             
+        bytes_sent += sock.sendto(b''.join([str(packet_sent).zfill(16).encode(), content]), addr)
         packet_sent += 1
 
+    printUploadUDP(sock, addr, packet_sent, bytes_sent)
+
+
+# UPLOAD TCP ---------------------------------------------------------------------------------------------------------------
+
+
+def printUploadTCP(sock, packet_sent, bytes_sent):
     sock.settimeout(10)
     try:
         msg = sock.recv(500)
@@ -119,13 +113,74 @@ def uploadTCP(sock):
     except socket.timeout: print("Pacote referente a outra maquina não recebido")
     
     sock.send(f"{packet_sent}><{bytes_sent}".encode())
+
+
+
+def uploadTCP(sock):
+    
+    packet_sent = 0
+    bytes_sent = 0
+
+    # Loop de (exec_time) segundos
+    inicio = time.monotonic()
+    tempo = exec_time + inicio
+    t1.start()
+    while(time.monotonic() < tempo):
+        bytes_sent += sock.send(b''.join([str(packet_sent).zfill(16).encode(), content]))             
+        packet_sent += 1
+
+    printUploadTCP(sock, packet_sent, bytes_sent)
     
 
+# DOWNLOAD -----------------------------------------------------------------------------------------------------------------
+
+
+def reestruturarPacotes (v):
+    s = set()
+
+    buffer = ""
+    bytes_recv = 0
+    for data in v:
+        bytes_recv += len(data)
+
+        buffer += data.decode()
+        while "--" in buffer:
+            pacote, buffer = buffer.split("--", 1)
+
+            try:
+                identifier, _ = pacote.split("<>") 
+                s.add(int(identifier))
+            except ValueError: continue
+
+    num_pckt = len(s)
+    pckt_recv = len(v)
+    lost_pckt = max(s) - (len(s) - 1)
+
+    return bytes_recv, pckt_recv, lost_pckt, num_pckt
+
+
+# DOWNLOAD UDP -------------------------------------------------------------------------------------------------------------
+
+
+def printDownloadUDP(sock, addr, bytes_recv, pckt_recv, lost_pckt, lenghtS):
+    sock.sendto(f"{bytes_recv}><{pckt_recv}><{lost_pckt}><{lenghtS}".encode(), addr)
+    sock.settimeout(10)
+    try:
+        msg, _ = sock.recvfrom(500)
+        while b"><" not in msg: msg, _ = sock.recvfrom(500)
+        packet_sent, bytes_sent = msg.decode().split("><")
+
+        non_recv = int(packet_sent) - lenghtS
+        print(f"\nTaxa de DOWNLOAD nessa maquina({socket.gethostbyname(socket.gethostname())}):")
+        printDataDownload(bytes_recv, pckt_recv, lost_pckt, non_recv)
+
+        print(f"\nTaxa de UPLOAD na outra maquina({host}):")
+        printDataUpload(int(packet_sent), int(bytes_sent))
+    except socket.timeout: print("Pacote referente a outra maquina não recebido")
 
 
 
 def downloadUDP(sock):
-    s = set()
 
     # Pacote Inicial do "fluxo"
     data, addr = sock.recvfrom(500)
@@ -145,33 +200,24 @@ def downloadUDP(sock):
             v.append(data)
         except socket.timeout: continue
 
-    buffer = ""
-    bytes_recv = 0
-    for data in v:
-        bytes_recv += len(data)
+    bytes_recv, pckt_recv, lost_pckt, lenghtS = reestruturarPacotes(v)
+    printDownloadUDP(sock, addr, bytes_recv, pckt_recv, lost_pckt, lenghtS)
 
-        buffer += data.decode()
-        while "--" in buffer:
-            pacote, buffer = buffer.split("--", 1)
 
-            try:
-                identifier, _ = pacote.split("<>") 
-                s.add(int(identifier))
-            except ValueError: continue
+# DOWNLOAD TCP -------------------------------------------------------------------------------------------------------------
 
-    pckt_recv = len(v)
-    lost_pckt = max(s) - (len(s) - 1)
 
-    sock.settimeout(10)
-    sock.sendto(f"{bytes_recv}><{pckt_recv}><{lost_pckt}><{len(s)}".encode(), addr)
+def printDownloadTCP(sock, bytes_recv, pckt_recv, lost_pckt, lenghtS):
     
-
+    sock.send(f"{bytes_recv}><{pckt_recv}><{lost_pckt}><{lenghtS}".encode())
+    sock.settimeout(10)
+    
     try:
-        msg, _ = sock.recvfrom(500)
-        while b"><" not in msg: msg, _ = sock.recvfrom(500)
+        msg = sock.recv(500)
+        while b"><" not in msg: msg = sock.recv(500)
         packet_sent, bytes_sent = msg.decode().split("><")
-
-        non_recv = int(packet_sent) - len(s)
+        
+        non_recv = int(packet_sent) - lenghtS
         print(f"\nTaxa de DOWNLOAD nessa maquina({socket.gethostbyname(socket.gethostname())}):")
         printDataDownload(bytes_recv, pckt_recv, lost_pckt, non_recv)
 
@@ -181,9 +227,7 @@ def downloadUDP(sock):
 
 
 
-
 def downloadTCP(sock):
-    s = set()
 
     # Pacote Inicial do "fluxo"
     data = sock.recv(500)
@@ -203,41 +247,11 @@ def downloadTCP(sock):
             v.append(data)
         except socket.timeout: continue
 
-    buffer = ""
-    bytes_recv = 0
-    for data in v:
-        bytes_recv += len(data)
-
-        buffer += data.decode()
-        while "--" in buffer:
-            pacote, buffer = buffer.split("--", 1)
-
-            try:
-                identifier, _ = pacote.split("<>") 
-                s.add(int(identifier))
-            except ValueError: continue
-
-    pckt_recv = len(v)
-    lost_pckt = max(s) - (len(s) - 1)
-
+    bytes_recv, pckt_recv, lost_pckt, lenghtS = reestruturarPacotes(v)
+    printDownloadTCP(sock, bytes_recv, pckt_recv, lost_pckt, lenghtS)
     
-    sock.send(f"{bytes_recv}><{pckt_recv}><{lost_pckt}><{len(s)}".encode())
 
-    sock.settimeout(10)
-    try:
-        msg = sock.recv(500)
-        while b"><" not in msg: msg = sock.recv(500)
-        packet_sent, bytes_sent = msg.decode().split("><")
-        
-        non_recv = int(packet_sent) - len(s)
-        print(f"\nTaxa de DOWNLOAD nessa maquina({socket.gethostbyname(socket.gethostname())}):")
-        printDataDownload(bytes_recv, pckt_recv, lost_pckt, non_recv)
-
-        print(f"\nTaxa de UPLOAD na outra maquina({host}):")
-        printDataUpload(int(packet_sent), int(bytes_sent))
-    except socket.timeout: print("Pacote referente a outra maquina não recebido")
-
-
+# BASE SOCKET --------------------------------------------------------------------------------------------------------------
 
 
 
