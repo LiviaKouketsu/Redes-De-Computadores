@@ -215,6 +215,7 @@ def printDownloadTCP(sock, bytes_recv, pckt_recv, lost_pckt, lenghtS):
     try:
         msg = sock.recv(500)
         while b"><" not in msg: msg = sock.recv(500)
+        if b"--" in msg: _, msg = msg.split(b"--", 1)
         packet_sent, bytes_sent = msg.decode().split("><")
         
         non_recv = int(packet_sent) - lenghtS
